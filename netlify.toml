@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@netlify/blobs"]
+
+# Proxy all /api/* requests to the Netlify Function that wraps the Express app.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# SPA fallback: let client-side routes (e.g. /home) work on direct navigation.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
