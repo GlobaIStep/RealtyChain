@@ -289,6 +289,238 @@
       "accredited": false,
       "walletAddress": null,
       "kyc": null
+    },
+    {
+      "id": 21,
+      "email": "kyc-1788187252369@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$xDB/dxUkrzpE8/2aruljGOuh8mdaKnyNecCk6z8vbefVDEqDtO02G",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a0584418c1",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-08-31T14:40:52.566Z",
+        "reviewedAt": "2026-08-31T14:40:52.894Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 22,
+      "email": "kyc2-1788187252992@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$/ejQ1rNxwngb0nUrX4HCce6dqJROgsa4SaNHeM7wTd2Kg5e5cm.aK",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
+    },
+    {
+      "id": 23,
+      "email": "kyc-1788274047711@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$9wfqbcOCvRVBi8..R49/pezaxWFwQrOdYbrpU4usdTUgpl1xGJyUG",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a05d707be3",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-09-01T14:47:27.891Z",
+        "reviewedAt": "2026-09-01T14:47:27.970Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 24,
+      "email": "kyc2-1788274047975@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$.xo6PC3qsLD9oRxne.CNXuw/g4N0rR.892OyTY9TQm72wp9N.u5ci",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
+    },
+    {
+      "id": 25,
+      "email": "kyc-1788274438693@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$k9tEMe3FuvO7rqmGs4fg6u2TJT2LUOkL4OWAr8qre0BYa5d5POi0S",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a05d767317",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-09-01T14:53:58.855Z",
+        "reviewedAt": "2026-09-01T14:53:58.934Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 26,
+      "email": "kyc2-1788274438938@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$oms3I4D96NRyfCGRwMfSFOAeYpA3eJsDAXj5H//W.mOVnaIYN6g5u",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
+    },
+    {
+      "id": 27,
+      "email": "kyc-1788274997208@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$TGsvEJqRjlk.NOqs1MbBq.x.fMNXjTzmj9PACmjZrKYBritEJ9L62",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a05d7ef8d7",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-09-01T15:03:17.372Z",
+        "reviewedAt": "2026-09-01T15:03:17.462Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 28,
+      "email": "kyc2-1788274997466@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$JjFG/Y55KupNRjCHzGGpm.3jrkTVENvOOEFoQ60iD/aELIFmuECOS",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
+    },
+    {
+      "id": 29,
+      "email": "kyc-1788275030945@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$ZyMqaJH/uBGgkmTwjp69fOlDp2QqWKV8iQE6AvfLR.XClXaf.TYse",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a05d7f7ca4",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-09-01T15:03:51.116Z",
+        "reviewedAt": "2026-09-01T15:03:51.203Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 30,
+      "email": "kyc2-1788275031212@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$vyd4ygUbhKEaQsYljBcyKekISWDtJU4QceUDdtP0c7RQs1WJnFs3a",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
+    },
+    {
+      "id": 31,
+      "email": "kyc-1788277312118@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$ewon0y/EGLXAgfoO2lRG8.JmmWAfBoUieGrREnY21DrnFehe42Mjy",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a05da24b6a",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-09-01T15:41:52.282Z",
+        "reviewedAt": "2026-09-01T15:41:52.361Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 32,
+      "email": "kyc2-1788277312365@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$rE2NgEjyJzkJOjF57LPPrelpSTEvuBFlQh5f8TaCLwFYqzXTTRVEC",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
+    },
+    {
+      "id": 33,
+      "email": "kyc-1788281097107@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$GuDOlFJGkBRv./uN81IU5uD2YprrhMht.DFNA1kqdMb.phMizCa22",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a05ddc0c9b",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-09-01T16:44:57.289Z",
+        "reviewedAt": "2026-09-01T16:44:57.370Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 34,
+      "email": "kyc2-1788281097373@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$RD4CHsCpnNiV6Q98cnxLzOsbBDm.X2yTzZU24hpC9Vhioi2O900US",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
+    },
+    {
+      "id": 35,
+      "email": "kyc-1788352517600@example.com",
+      "name": "Kyc User",
+      "role": "user",
+      "password_hash": "$2b$10$InB4qtvvi27qtAFtRu0lyeY3m9nSvnpBFJo3IWFnIH6WunKz/l46K",
+      "kycStatus": "approved",
+      "accredited": true,
+      "walletAddress": "0x000000000000000000000000000001a0621dd6d7",
+      "kyc": {
+        "legalName": "Kyc User",
+        "country": "US",
+        "submittedAt": "2026-09-02T12:35:17.768Z",
+        "reviewedAt": "2026-09-02T12:35:17.846Z",
+        "reviewNote": null,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": 36,
+      "email": "kyc2-1788352517851@example.com",
+      "name": "Other",
+      "role": "user",
+      "password_hash": "$2b$10$Zp9Jr4mRUVh.Tx8cguuy2eApoYsoavbmrF7f9AGxKePynEW8uwy.a",
+      "kycStatus": "unverified",
+      "accredited": false,
+      "walletAddress": null,
+      "kyc": null
     }
   ],
   "properties": [
@@ -368,7 +600,9 @@
       "galleryUrls": [
         "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
         "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1470&q=80"
-      ]
+      ],
+      "bedrooms": 3,
+      "bathrooms": 2
     },
     {
       "id": "2",
@@ -438,7 +672,9 @@
       ],
       "galleryUrls": [
         "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80"
-      ]
+      ],
+      "bedrooms": 5,
+      "bathrooms": 6
     },
     {
       "id": "3",
@@ -508,7 +744,9 @@
       ],
       "galleryUrls": [
         "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80"
-      ]
+      ],
+      "bedrooms": null,
+      "bathrooms": null
     },
     {
       "id": "4",
@@ -565,7 +803,9 @@
       ],
       "galleryUrls": [
         "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=1530&q=80"
-      ]
+      ],
+      "bedrooms": 4,
+      "bathrooms": 3
     },
     {
       "id": "5",
@@ -635,7 +875,9 @@
       ],
       "galleryUrls": [
         "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1374&q=80"
-      ]
+      ],
+      "bedrooms": null,
+      "bathrooms": null
     },
     {
       "id": "6",
@@ -705,7 +947,9 @@
       ],
       "galleryUrls": [
         "https://images.unsplash.com/photo-1448630360428-65456885c650?ixlib=rb-4.0.3&auto=format&fit=crop&w=1467&q=80"
-      ]
+      ],
+      "bedrooms": 4,
+      "bathrooms": 3.5
     }
   ],
   "activity": {

@@ -1,4 +1,3 @@
-const path = require('path');
 const vault = require('../services/vaultService');
 const propertyService = require('../services/propertyService');
 
@@ -8,17 +7,27 @@ function sendError(res, err) {
   return res.status(status).json({ error: err.message || 'Request failed' });
 }
 
-function sendFile(res, filePath) {
-  if (!filePath) return res.status(404).json({ error: 'Document not found' });
-  return res.sendFile(path.resolve(filePath));
+function sendPdf(res, buffer) {
+  if (!buffer) return res.status(404).json({ error: 'Document not found' });
+  res.set('Content-Type', 'application/pdf');
+  res.set('Cache-Control', 'private, max-age=60');
+  return res.send(buffer);
 }
 
-function seed(req, res) {
-  return sendFile(res, vault.seedPath(req.params.file));
+async function seed(req, res) {
+  try {
+    return sendPdf(res, await vault.readSeed(req.params.file));
+  } catch (err) {
+    return sendError(res, err);
+  }
 }
 
-function propertyFile(req, res) {
-  return sendFile(res, vault.propertyFilePath(req.params.propertyId, req.params.file));
+async function propertyFile(req, res) {
+  try {
+    return sendPdf(res, await vault.readPropertyFile(req.params.propertyId, req.params.file));
+  } catch (err) {
+    return sendError(res, err);
+  }
 }
 
 function upload(req, res) {

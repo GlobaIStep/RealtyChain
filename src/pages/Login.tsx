@@ -4,22 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { MailIcon, LockIcon, ShieldAlertIcon, ArrowRightIcon, LoaderIcon } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { Button } from '../components/ui/Button';
-import { AdminApprovalModal } from '../components/modals/AdminApprovalModal';
 import { useAuth } from '../context/AuthContext';
-import { apiFetch, loginRequest, ServerSettings } from '../utils/api';
-import type { AuthUser } from '../utils/api';
+import { loginRequest } from '../utils/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { applySession, setServerFlag: setAuthServerFlag } = useAuth();
+  const { applySession } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showAdminModal, setShowAdminModal] = useState(false);
   const [ipBlocked, setIpBlocked] = useState(false);
-  const [serverFlag, setServerFlag] = useState(false);
-  const [pendingSession, setPendingSession] = useState<{ token: string; user: AuthUser } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,28 +27,13 @@ export default function Login() {
     setLoading(true);
     try {
       const session = await loginRequest(email, password);
-
-      let restricted = false;
-      try {
-        const settings = await apiFetch<ServerSettings>('/api/settings');
-        setServerFlag(settings.serverFlag);
-        setAuthServerFlag(settings.serverFlag);
-        restricted = settings.serverFlag;
-      } catch {
-        // Kill switch unreachable — do not block a valid login.
-      }
-
-      if (!restricted) {
-        applySession(session.token, session.user);
-        navigate('/home');
-        return;
-      }
-
-      setPendingSession(session);
-      setIpBlocked(true);
+      applySession(session.token, session.user);
+      navigate('/home');
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
-      if (message === 'Invalid credentials') {
+      if (/ip address is not allowed/i.test(message)) {
+        setIpBlocked(true);
+      } else if (message === 'Invalid credentials') {
         setError('Invalid email or password.');
       } else if (message) {
         setError(message);
@@ -63,18 +43,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleApproved = () => {
-    setShowAdminModal(false);
-    if (serverFlag) {
-      navigate('/');
-      return;
-    }
-    if (pendingSession) {
-      applySession(pendingSession.token, pendingSession.user);
-    }
-    navigate('/home');
   };
 
   return (
@@ -115,9 +83,9 @@ export default function Login() {
                 Access restricted
               </h2>
               <p className="text-cream-400 leading-relaxed mb-8">
-                This server is in restricted mode and your IP address is not
-                authorized for admin approval. Please contact the administrator
-                to request access.
+                Your IP is not allowed to access this site. To allow your IP,
+                please contact our team and follow the DNS configuration
+                instructions.
               </p>
               <Button variant="secondary" fullWidth onClick={() => setIpBlocked(false)}>
                 Try again
@@ -180,13 +148,6 @@ export default function Login() {
           </p>
         </motion.div>
       </div>
-
-      <AdminApprovalModal
-        isOpen={showAdminModal}
-        onClose={() => setShowAdminModal(false)}
-        onApproved={handleApproved}
-        email={email}
-      />
     </div>
   );
 }

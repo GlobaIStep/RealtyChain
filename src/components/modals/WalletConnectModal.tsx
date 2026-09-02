@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XIcon } from 'lucide-react';
-import { ConnectWalletButton } from '../components/ui/ConnectWalletButton';
+import { ConnectWalletButton } from '../ui/ConnectWalletButton';
 
 type WalletConnectModalProps = {
   isOpen: boolean;

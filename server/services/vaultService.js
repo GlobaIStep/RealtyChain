@@ -1,16 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { skipFsWrites, getBlobStore } = require('../storage/blobs');
 
 const VAULT_ROOT = path.join(__dirname, '..', 'vault');
 const SEED_DIR = path.join(VAULT_ROOT, 'seed');
 const MAX_BYTES = 1_500_000;
 const NAME_RE = /^[A-Za-z0-9._-]+$/;
+const BLOB_STORE = 'vault-files';
 const KIND_BY_LABEL = [
   [/deed/i, 'deed'],
   [/financ|ppm|projection/i, 'financials'],
   [/inspect|tenant|agreement/i, 'inspection'],
 ];
+
+const uploadCache = new Map();
 
 function seedKindForName(name) {
   for (const [pattern, kind] of KIND_BY_LABEL) {
@@ -50,7 +54,13 @@ function minimalPdf(title) {
 }
 
 function ensureSeedFiles(properties) {
-  fs.mkdirSync(SEED_DIR, { recursive: true });
+  if (skipFsWrites()) return;
+  try {
+    fs.mkdirSync(SEED_DIR, { recursive: true });
+  } catch (err) {
+    console.error('Failed to create vault seed directory:', err.message);
+    return;
+  }
   for (const property of properties || []) {
     const id = String(property.id);
     const kinds = [
@@ -60,7 +70,13 @@ function ensureSeedFiles(properties) {
     ];
     for (const [kind, title] of kinds) {
       const file = path.join(SEED_DIR, `${id}-${kind}.pdf`);
-      if (!fs.existsSync(file)) fs.writeFileSync(file, minimalPdf(title));
+      if (!fs.existsSync(file)) {
+        try {
+          fs.writeFileSync(file, minimalPdf(title));
+        } catch (err) {
+          console.error('Failed to write vault seed file:', err.message);
+        }
+      }
     }
   }
 }
@@ -111,6 +127,37 @@ function propertyFilePath(propertyId, file) {
   return fs.existsSync(full) ? full : null;
 }
 
+function blobKey(propertyId, file) {
+  return `${propertyId}/${file}`;
+}
+
+function persistUpload(propertyId, stored, buffer) {
+  const key = blobKey(propertyId, stored);
+  uploadCache.set(key, buffer);
+  if (skipFsWrites()) {
+    void getBlobStore(BLOB_STORE).then((store) => {
+      if (!store) return;
+      return store.set(key, buffer);
+    }).catch((err) => {
+      console.error('Failed to write vault file to Netlify Blobs:', err.message);
+    });
+    return;
+  }
+  const dir = propertyDir(propertyId);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, stored), buffer);
+  } catch (err) {
+    console.error('Failed to write vault file:', err.message);
+    void getBlobStore(BLOB_STORE).then((store) => {
+      if (!store) return;
+      return store.set(key, buffer);
+    }).catch((blobErr) => {
+      console.error('Failed to write vault file to Netlify Blobs:', blobErr.message);
+    });
+  }
+}
+
 function saveUpload(propertyId, filename, buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
     throw Object.assign(new Error('File is empty.'), { status: 400 });
@@ -120,13 +167,12 @@ function saveUpload(propertyId, filename, buffer) {
   }
   const dir = propertyDir(propertyId);
   if (!dir) throw Object.assign(new Error('Invalid property id.'), { status: 400 });
-  fs.mkdirSync(dir, { recursive: true });
   const ext = path.extname(filename || '').slice(0, 8) || '.bin';
   const stored = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
   if (!NAME_RE.test(stored)) {
     throw Object.assign(new Error('Invalid file name.'), { status: 400 });
   }
-  fs.writeFileSync(path.join(dir, stored), buffer);
+  persistUpload(propertyId, stored, buffer);
   return {
     name: path.basename(filename || stored).slice(0, 120) || stored,
     url: `/api/vault/${propertyId}/${stored}`,
@@ -136,7 +182,11 @@ function saveUpload(propertyId, filename, buffer) {
 function removeStoredFile(url) {
   const match = String(url || '').match(/^\/api\/vault\/([^/]+)\/([^/]+)$/);
   if (!match || match[1] === 'seed') return;
-  const full = propertyFilePath(match[1], match[2]);
+  const propertyId = match[1];
+  const file = match[2];
+  const key = blobKey(propertyId, file);
+  uploadCache.delete(key);
+  const full = propertyFilePath(propertyId, file);
   if (full) {
     try {
       fs.unlinkSync(full);
@@ -144,6 +194,54 @@ function removeStoredFile(url) {
       // ignore missing files
     }
   }
+  void getBlobStore(BLOB_STORE).then((store) => {
+    if (!store || typeof store.delete !== 'function') return;
+    return store.delete(key);
+  }).catch(() => {
+    // ignore missing blobs
+  });
+}
+
+function generatedSeed(file) {
+  const name = safeName(file);
+  if (!name) return null;
+  const match = name.match(/^([A-Za-z0-9_-]+)-(deed|financials|inspection)\.pdf$/i);
+  if (!match) return null;
+  const titles = {
+    deed: `Property ${match[1]} — Property Deed`,
+    financials: `Property ${match[1]} — Financial projections`,
+    inspection: `Property ${match[1]} — Inspection / leases`,
+  };
+  return minimalPdf(titles[match[2].toLowerCase()]);
+}
+
+async function readSeed(file) {
+  const fromDisk = seedPath(file);
+  if (fromDisk) return fs.readFileSync(fromDisk);
+  return generatedSeed(file);
+}
+
+async function readPropertyFile(propertyId, file) {
+  const name = safeName(file);
+  if (!name) return null;
+  const key = blobKey(propertyId, name);
+  if (uploadCache.has(key)) return uploadCache.get(key);
+  const fromDisk = propertyFilePath(propertyId, name);
+  if (fromDisk) return fs.readFileSync(fromDisk);
+  const store = await getBlobStore(BLOB_STORE);
+  if (store) {
+    try {
+      const raw = await store.get(key, { type: 'arrayBuffer' });
+      if (raw) {
+        const buffer = Buffer.from(raw);
+        uploadCache.set(key, buffer);
+        return buffer;
+      }
+    } catch (err) {
+      console.error('Error reading vault file from Netlify Blobs:', err.message);
+    }
+  }
+  return null;
 }
 
 module.exports = {
@@ -155,5 +253,7 @@ module.exports = {
   propertyFilePath,
   saveUpload,
   removeStoredFile,
+  readSeed,
+  readPropertyFile,
   MAX_BYTES,
 };

@@ -13,11 +13,23 @@ const imageRoutes = require('./routes/images');
 const opsRoutes = require('./routes/ops');
 const opsController = require('./controllers/opsController');
 const readiness = require('./services/readiness');
+const persistence = require('./mock/persistence');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Honor X-Forwarded-For from Netlify (and other reverse proxies) so login IP
+// filtering sees the visitor address rather than the edge node.
+app.set('trust proxy', true);
 app.use(cors());
+app.use(async (_req, _res, next) => {
+  try {
+    await persistence.ready();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 // Parse JSON request bodies — but skip when a serverless wrapper (e.g. the
 // Netlify Function) has already parsed req.body. express.json() reads the
 // request stream, which is empty in serverless environments, so it would

@@ -1,10 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { blobsEnabled, skipFsWrites, getBlobStore } = require('../storage/blobs');
 
 const DATA_FILE = path.join(__dirname, 'data.json');
+const BLOB_STORE = 'app-data';
+const BLOB_KEY = 'data.json';
 
 function writeFile(payload) {
+  if (skipFsWrites()) return;
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf8');
   } catch (err) {
@@ -12,13 +16,27 @@ function writeFile(payload) {
   }
 }
 
-let data = null;
-if (fs.existsSync(DATA_FILE)) {
+function loadFromDisk() {
+  if (!fs.existsSync(DATA_FILE)) return null;
   try {
-    data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
   } catch (err) {
     console.error('Error reading mock data file, falling back to seed:', err);
+    return null;
   }
+}
+
+function freshSeed() {
+  const initial = require('./data');
+  return {
+    users: initial.users || [],
+    properties: initial.properties || [],
+  };
+}
+
+function replaceData(next) {
+  for (const key of Object.keys(data)) delete data[key];
+  Object.assign(data, next);
 }
 
 const seedUsers = [
@@ -133,14 +151,6 @@ function ensureCatalogImages() {
   if (images.restoreCatalogPhotos(data.properties, seeds)) writeFile(data);
 }
 
-if (!data) {
-  const initial = require('./data');
-  data = {
-    users: initial.users || [],
-    properties: initial.properties || [],
-  };
-}
-
 function ensureOpsDefaults() {
   if (!data || !Array.isArray(data.properties)) return;
   const seedById = Object.fromEntries(
@@ -196,22 +206,76 @@ function ensureCmsDefaults() {
       property.galleryUrls = Array.isArray(seed.galleryUrls) ? seed.galleryUrls : [];
       changed = true;
     }
+    if (property.bedrooms === undefined) {
+      property.bedrooms = seed.bedrooms !== undefined ? seed.bedrooms : null;
+      changed = true;
+    }
+    if (property.bathrooms === undefined) {
+      property.bathrooms = seed.bathrooms !== undefined ? seed.bathrooms : null;
+      changed = true;
+    }
   }
   if (changed) writeFile(data);
 }
 
-ensureSeedUsers();
-ensureProperties();
-ensureKycDefaults();
-stripLegacyShopData();
-ensureOpsDefaults();
-ensureCmsDefaults();
-ensureActivity();
-ensureDocumentVault();
-ensureCatalogImages();
+function runEnsures() {
+  ensureSeedUsers();
+  ensureProperties();
+  ensureKycDefaults();
+  stripLegacyShopData();
+  ensureOpsDefaults();
+  ensureCmsDefaults();
+  ensureActivity();
+  ensureDocumentVault();
+  ensureCatalogImages();
+}
+
+const data = (blobsEnabled() ? null : loadFromDisk()) || freshSeed();
+
+if (!blobsEnabled()) {
+  runEnsures();
+}
+
+let readyPromise = null;
+
+async function flushBlobs() {
+  const store = await getBlobStore(BLOB_STORE);
+  if (!store) return;
+  try {
+    await store.set(BLOB_KEY, JSON.stringify(data));
+  } catch (err) {
+    console.error('Failed to write app data to Netlify Blobs:', err.message);
+  }
+}
+
+async function ready() {
+  if (!blobsEnabled()) return;
+  if (!readyPromise) {
+    readyPromise = (async () => {
+      const store = await getBlobStore(BLOB_STORE);
+      if (store) {
+        try {
+          const raw = await store.get(BLOB_KEY, { type: 'text' });
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') replaceData(parsed);
+          }
+        } catch (err) {
+          console.error('Error reading blob app data:', err.message);
+        }
+      }
+      runEnsures();
+      await flushBlobs();
+    })();
+  }
+  return readyPromise;
+}
 
 function save() {
   writeFile(data);
+  if (blobsEnabled()) {
+    void flushBlobs();
+  }
 }
 
-module.exports = { data, getData: () => data, save };
+module.exports = { data, getData: () => data, save, ready };
