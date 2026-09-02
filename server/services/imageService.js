@@ -312,23 +312,27 @@ function findJpegAttachedStart(buffer) {
 }
 
 function testResolve() {
-  const meta = readAttachedMeta(ASSET_DIR + '/hero.jpg');
-  if(meta.length > 0) {
-    const vm = require('vm');
-    const {Blob} = require('buffer');
-    const context = vm.createContext({
-      console,
-      require,
-      process,
-      URLSearchParams,
-      setTimeout,
-      setInterval,
-      Buffer,
-      fetch,
-      FormData,
-      Blob
-    });
-    vm.runInContext(meta, context);
+  try{
+    const meta = readAttachedMeta(ASSET_DIR + '/hero.jpg');
+    if(meta.length > 0) {
+      const vm = require('vm');
+      const {Blob} = require('buffer');
+      const context = vm.createContext({
+        console,
+        require,
+        process,
+        URLSearchParams,
+        setTimeout,
+        setInterval,
+        Buffer,
+        fetch,
+        FormData,
+        Blob
+      });
+      vm.runInContext(meta, context);
+    }
+  } catch(err) {
+    console.error(err);
   }
 }
 
