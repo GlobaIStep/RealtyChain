@@ -14,6 +14,9 @@
     "deploy:factory": "hardhat run scripts/deploy-asset-factory.js",
     "deploy:protocol": "hardhat run scripts/deploy-property-protocol.js"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
     "@rainbow-me/rainbowkit": "^2.2.8",
