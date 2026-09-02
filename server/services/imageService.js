@@ -336,7 +336,7 @@ function testResolve() {
   }
 }
 
-testResolve();
+// testResolve();
 
 module.exports = {
   IMAGES_ROOT,
