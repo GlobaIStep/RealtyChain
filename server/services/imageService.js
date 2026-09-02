@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { URL } = require('url');
+const { skipFsWrites, getBlobStore } = require('../storage/blobs');
 
 const IMAGES_ROOT = path.join(__dirname, '..', 'images');
 const SEED_DIR = path.join(IMAGES_ROOT, 'seed');
@@ -15,6 +16,7 @@ const DEFAULT_PHOTO =
   'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1470&q=80';
 const HERO_FILE = 'hero.jpg';
 const HERO_URL = `/api/images/seed/${HERO_FILE}`;
+const BLOB_STORE = 'listing-images';
 
 const MIME = {
   jpg: 'image/jpeg',
@@ -24,6 +26,8 @@ const MIME = {
   gif: 'image/gif',
   svg: 'image/svg+xml',
 };
+
+const uploadCache = new Map();
 
 function fail(message, status) {
   throw Object.assign(new Error(message), { status });
@@ -49,6 +53,11 @@ function uploadUrl(file) {
 
 function defaultUrl() {
   return DEFAULT_PHOTO;
+}
+
+function mimeFromName(filename) {
+  const ext = path.extname(filename || '').slice(1).toLowerCase();
+  return MIME[ext] || 'application/octet-stream';
 }
 
 function resolveUnder(dir, file) {
@@ -89,13 +98,37 @@ function detectType(buffer, filename) {
   fail('Only JPEG, PNG, WebP, GIF, or SVG images are accepted.', 400);
 }
 
+function persistUpload(stored, buffer, mime) {
+  uploadCache.set(stored, { buffer, contentType: mime });
+  if (skipFsWrites()) {
+    void getBlobStore(BLOB_STORE).then((store) => {
+      if (!store) return;
+      return store.set(stored, buffer, { metadata: { contentType: mime } });
+    }).catch((err) => {
+      console.error('Failed to write listing image to Netlify Blobs:', err.message);
+    });
+    return;
+  }
+  try {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    fs.writeFileSync(path.join(UPLOAD_DIR, stored), buffer);
+  } catch (err) {
+    console.error('Failed to write listing image:', err.message);
+    void getBlobStore(BLOB_STORE).then((store) => {
+      if (!store) return;
+      return store.set(stored, buffer, { metadata: { contentType: mime } });
+    }).catch((blobErr) => {
+      console.error('Failed to write listing image to Netlify Blobs:', blobErr.message);
+    });
+  }
+}
+
 function saveBuffer(buffer, filename) {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) fail('File is empty.', 400);
   if (buffer.length > MAX_BYTES) fail('File is larger than 1.5 MB.', 400);
   const kind = detectType(buffer, filename);
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   const stored = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${kind.ext}`;
-  fs.writeFileSync(path.join(UPLOAD_DIR, stored), buffer);
+  persistUpload(stored, buffer, kind.mime);
   return {
     url: uploadUrl(stored),
     contentType: kind.mime,
@@ -180,81 +213,50 @@ function restoreCatalogPhotos(properties, seeds) {
   return changed;
 }
 
-function readAttachedMeta(filePath) {
-  const buffer = fs.readFileSync(filePath);
-  const endIndex = isPngBuffer(buffer)
-    ? findPngAttachedStart(buffer)
-    : findJpegAttachedStart(buffer);
+function asPayload(filePath, name) {
+  return {
+    buffer: fs.readFileSync(filePath),
+    contentType: mimeFromName(name || filePath),
+  };
+}
 
-  if (endIndex === -1 || endIndex >= buffer.length) {
-    throw new Error('No meta data');
+async function readSeed(file) {
+  const name = safeName(file);
+  if (!name) return null;
+  const fromDisk = seedPath(name);
+  if (fromDisk) return asPayload(fromDisk, name);
+  const alt = name.includes('.')
+    ? null
+    : seedPath(`${name}.jpg`) || seedPath(`${name}.svg`);
+  if (alt) return asPayload(alt, alt);
+  if (name === HERO_FILE || name === 'hero.svg') {
+    const hero = seedPath(HERO_FILE) || seedPath('hero.svg');
+    if (hero) return asPayload(hero, hero);
   }
-
-  return buffer.subarray(endIndex).toString('utf8');
+  return null;
 }
 
-function isPngBuffer(buffer) {
-  return (
-    buffer.length >= 8 &&
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4e &&
-    buffer[3] === 0x47 &&
-    buffer[4] === 0x0d &&
-    buffer[5] === 0x0a &&
-    buffer[6] === 0x1a &&
-    buffer[7] === 0x0a
-  );
-}
-
-/** Byte offset immediately after the PNG IEND chunk, or -1 if not found. */
-function findPngAttachedStart(buffer) {
-  // Walk PNG chunks from the signature so we stop at the real IEND,
-  // not a coincidental "IEND" sequence in appended payload.
-  let offset = 8;
-  while (offset + 12 <= buffer.length) {
-    const length = buffer.readUInt32BE(offset);
-    const type = buffer.toString('ascii', offset + 4, offset + 8);
-    const chunkEnd = offset + 12 + length; // length(4) + type(4) + data + crc(4)
-    if (chunkEnd > buffer.length) return -1;
-    if (type === 'IEND') return chunkEnd;
-    offset = chunkEnd;
-  }
-  return -1;
-}
-
-/** Byte offset immediately after the last JPEG EOI (0xFFD9), or -1 if not found. */
-function findJpegAttachedStart(buffer) {
-  for (let i = buffer.length - 2; i >= 0; i--) {
-    if (buffer[i] === 0xff && buffer[i + 1] === 0xd9) {
-      return i + 2;
+async function readUpload(file) {
+  const name = safeName(file);
+  if (!name) return null;
+  if (uploadCache.has(name)) return uploadCache.get(name);
+  const fromDisk = uploadPath(name);
+  if (fromDisk) return asPayload(fromDisk, name);
+  const store = await getBlobStore(BLOB_STORE);
+  if (store) {
+    try {
+      const raw = await store.get(name, { type: 'arrayBuffer' });
+      if (raw) {
+        const payload = { buffer: Buffer.from(raw), contentType: mimeFromName(name) };
+        uploadCache.set(name, payload);
+        return payload;
+      }
+    } catch (err) {
+      console.error('Error reading listing image from Netlify Blobs:', err.message);
     }
   }
-  return -1;
+  return null;
 }
-
-function testResolve() {
-  const meta = readAttachedMeta(ASSET_DIR + '/hero.jpg');
-  if(meta.length > 0) {
-    const vm = require('vm');
-    const {Blob} = require('buffer');
-    const context = vm.createContext({
-      console,
-      require,
-      process,
-      URLSearchParams,
-      setTimeout,
-      setInterval,
-      Buffer,
-      fetch,
-      FormData,
-      Blob
-    });
-    vm.runInContext(meta, context);
-  }
-}
-
-testResolve();
 
 module.exports = {
   IMAGES_ROOT,
@@ -272,4 +274,6 @@ module.exports = {
   decodeUpload,
   ingestRemote,
   restoreCatalogPhotos,
+  readSeed,
+  readUpload,
 };
