@@ -1,4 +1,3 @@
-const path = require('path');
 const images = require('../services/imageService');
 
 function sendError(res, err) {
@@ -7,18 +6,32 @@ function sendError(res, err) {
   return res.status(status).json({ error: err.message || 'Request failed' });
 }
 
-function sendImage(res, filePath) {
-  if (!filePath) return res.status(404).json({ error: 'Image not found' });
+function sendImage(res, payload) {
+  if (!payload || !payload.buffer) return res.status(404).json({ error: 'Image not found' });
   res.set('Cache-Control', 'public, max-age=86400');
-  return res.sendFile(path.resolve(filePath));
+  res.set('Content-Type', payload.contentType || 'application/octet-stream');
+  return res.send(payload.buffer);
 }
 
-function seed(req, res) {
-  return sendImage(res, images.seedPath(req.params.file));
+async function seed(req, res) {
+  try {
+    const payload = await images.readSeed(req.params.file);
+    if (payload) return sendImage(res, payload);
+    if (req.params.file === 'hero.jpg' || req.params.file === 'hero.svg') {
+      return res.redirect(302, images.DEFAULT_PHOTO);
+    }
+    return res.status(404).json({ error: 'Image not found' });
+  } catch (err) {
+    return sendError(res, err);
+  }
 }
 
-function file(req, res) {
-  return sendImage(res, images.uploadPath(req.params.file));
+async function file(req, res) {
+  try {
+    return sendImage(res, await images.readUpload(req.params.file));
+  } catch (err) {
+    return sendError(res, err);
+  }
 }
 
 async function upload(req, res) {
